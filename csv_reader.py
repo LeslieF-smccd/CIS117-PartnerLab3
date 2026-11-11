@@ -7,6 +7,47 @@ Original file is located at
     https://colab.research.google.com/drive/1tKPfAT5ANx5MmVH6wOpv1D186BfjeCuZ
 """
 
+# Commented out IPython magic to ensure Python compatibility.
+# Run this cell to mount your Google Drive
+"""
+from google.colab import drive
+
+from pathlib import Path
+
+# Problems encountered from unmounting and remounting the directories
+# this file resides beneath. Solution is to %cd to somewhere else
+# unaffected (/) and then %cd to desired directory after remounted.
+
+!pwd
+
+# %cd /
+drive.flush_and_unmount()
+drive.mount('/content/gdrive', force_remount=True)
+# %cd '/content/gdrive/MyDrive/Colab Notebooks'
+
+# Ideally want the file "country_full.csv" coming from the subdir the notebook is
+# installed and running in after performing %cd calls.
+# Want directory to be somewhere else besides the default "main" directory
+# of Colab Notebooks.
+# Analyze the expected development and sharing subdir for having the antics.py
+# file as present, when the above colab default main directory doesn't have it.
+# If present, cd to its subdir, so the follow up import can succeed by just
+# using basename of the module, i.e. its .py file will be in the cwd.
+#
+# The UNIQUE development, as assignment shared, subdir is "cis117/Lab3_leslie"
+#
+target = 'country_full.csv'
+subdir =  'cis117/Lab3_leslie'
+sub_pvt = Path.joinpath(Path.cwd(), subdir + '/' + target)
+main_peer = Path.joinpath(Path.cwd(), target)
+has_sub_pvt = Path.exists(sub_pvt)
+has_main_peer = Path.exists(main_peer)
+if has_sub_pvt : # and not has_main_peer:
+#     %cd '{subdir}'
+"""
+
+None
+
 # CIS-117 Lab 3
 # CSV file reader module
 # Authors: Leslie Fong
@@ -108,6 +149,8 @@ class csvDataBase():
         return f"csvDataBase for {self.source} holding\n{str(self.csv_store)}\n\
 " + f"majors: {str(self.major_fields)}\nsecondary view: {str(self.minor_dict)}"
 
+# _cleanQuotes() is an internal utility for converting double double quotes inside of
+# CSV fields (escaped) back into user usage value.
 
 def _cleanQuotes(strq):
     dquote = '"'
@@ -171,34 +214,33 @@ def readCountryCSV(file_path = "", main_field="name", group_field = "region",
                 print("Accepting user path", file_path)
             paths.insert(0, file_path)
 
+    file_opened_successfully = False
+
     # Loop over typical installation's paths for finding the country CSV file
     for times in range(len(paths)):
         path = paths[times]
         try:
-            file_obj = None
-            file_obj = open(path)
+            with open(path, mode="r", newline="") as file_obj:
+                csv_rows = file_obj.readlines()
+                file_opened_successfully = True
+                datasource = path
         except FileNotFoundError as e:
             if verbose or verboseErrors:
                 print("Open path not found", e)
-            file_obj = None
         except PermissionError as e:
             if verbose or verboseErrors:
                 print("Open path failed from permissions", e)
-            file_obj = None
+        except OSError as e:   # same as older IOError
+            if verbose or verboseErrors:
+                print("Open path failed", e)
 
-        if file_obj != None:
+        if file_opened_successfully:
             if verbose:
                 print("Successfully opened", path)
             datasource = path
             break
 
-    if file_obj != None:
-        # Rows separated by newline \n characters can use readlines() to read in
-        #  all rows returned as a list of strings
-        csv_rows = file_obj.readlines() if file_obj != None else []
-        file_obj.close()
-        file_obj = "done"  # Prevent reuse as a file, without confusions as None.
-    elif not skip_url:
+    if not file_opened_successfully and not skip_url:
         urls = [fallback_URL]
         if verbose or verboseErrors:
             print("Can't process file open() without access to a file.  Trying a URL backup.")
@@ -226,7 +268,7 @@ def readCountryCSV(file_path = "", main_field="name", group_field = "region",
             if verbose or verboseErrors:
                 print("All predefined data URLs failed.\n")
 
-    else:
+    elif not file_opened_successfully:
         if verbose or verboseErrors:
             print("Can't process file open() without access to a file.")
         return None # csvDataBase()
@@ -381,5 +423,4 @@ if __name__ == "__main__":
                 print("Call writer on", data, f"\nwith fieldnames as {[key1, key2]}'")
                 fname = regionName if len(regionName) > 0 else "undefined_ant"
                 writerman(fname, data)
-            print(csvdb.major_fields.items())
 None
