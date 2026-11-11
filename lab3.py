@@ -10,8 +10,9 @@ from csv_writer import writeRegionCSV
 
 
 def main():
-    folder = Path(__file__).resolve().parent
-    database = readCountryCSV(folder / "country_full.csv")
+    # folder = Path(__file__).resolve().parent
+    folder = Path() # more portable than resolve()
+    database = readCountryCSV(str(folder / "country_full.csv"))
     return writeRegionCSV(database, folder / "region_files")
 
 
